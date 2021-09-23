@@ -1,23 +1,24 @@
 OCEAN:
-  GPUS: '0,1,2,3,4,5,6,7'
+  GPUS: '0,1'
   PRINT_FREQ: 10
-  WORKERS: 32
+  WORKERS: 16
   OUTPUT_DIR: 'logs'   # log file
   CHECKPOINT_DIR: 'snapshot'   # checkpoint file
 
   TRAIN:
     ISTRUE: True  # whether to test
     MODEL: "Ocean"
-    ALIGN: True      # object aware branch
-    START_EPOCH: 0
+    ALIGN: False      # object aware branch
+    START_EPOCH: 30
     END_EPOCH: 50
     TEMPLATE_SIZE: 127
     SEARCH_SIZE: 255
-    BATCH: 32
+    BATCH:  28
     STRIDE: 8
-    RESUME: False
+    RESUME: './snapshot/checkpoint_e30.pth'
     PRETRAIN: 'pretrain.model'
     LR_POLICY: 'log'
+    OUTPUT_SIZE: 25
 
     WARMUP:
       IFNOT: True
@@ -36,14 +37,14 @@ OCEAN:
 
     LAYERS_LR: 0.1  # res50 0.1  alex: 1  # scale ration for backbone
     BASE_LR: 0.005
-    UNFIX_EPOCH: 10
+    UNFIX_EPOCH: 30
     WARM_POLICY: 'step'
     UNFIX_POLICY: 'log'
     MOMENTUM: 0.9
     WEIGHT_DECAY: 0.0001
-    TRAINABLE_LAYER: ['layer1', 'layer2', 'layer3']  # ['layer2', 'layer3', 'layer4']
+    TRAINABLE_LAYER: ['layer2', 'layer3', 'layer4']  # ['layer2', 'layer3', 'layer4']
     WHICH_USE: ['YTB', 'VID', 'COCO', 'DET', 'GOT10K']
-
+#    WHICH_USE: ['COCO']
   TEST:    # TEST model is same as TRAIN.MODEL
     ISTRUE: False  # whether to test
     THREADS: 16   # multi threads test
@@ -71,29 +72,58 @@ OCEAN:
     SHIFTs: 64
     SCALEs: 0.18
 
+#    VID:
+#      PATH: './data/vid/crop511'
+#      ANNOTATION: './data/vid/train.json'
+#      RANGE: 100
+#      USE: 100000
+#    YTB:
+#      PATH: './data/y2b/crop511'
+#      ANNOTATION: './data/y2b/train.json'
+#      RANGE: 3
+#      USE: 200000
+#    GOT10K:
+#      PATH: './data/got10k/crop511'
+#      ANNOTATION: './data/got10k/all.json'
+#      RANGE: 100
+#      USE: 200000
+#    DET:
+#      PATH: './data/det/crop511'
+#      ANNOTATION: './data/det/train.json'
+#      RANGE: 100
+#      USE: 50000
+#    COCO:
+#      PATH: "./data/coco/crop511"
+#      ANNOTATION: "./data/coco/train2017.json"
+#      RANGE: 1
+#      USE: 50000
+
+
+
     VID:
-      PATH: './data/vid/crop511'
-      ANNOTATION: './data/vid/train.json'
+#      PATH: './data/vid/crop511'
+      PATH: '/root/object_tracking_0/tracking/after_pysot_deal_dataset/vid/crop511'
+#      ANNOTATION: './data/vid/train.json'
+      ANNOTATION: '/root/object_tracking_0/tracking/after_pysot_deal_dataset/vid/train.json'
       RANGE: 100
       USE: 100000
     YTB:
-      PATH: './data/y2b/crop511'
-      ANNOTATION: './data/y2b/train.json'
+      PATH: '/root/object_tracking_3/tracking/after_pysot_deal_dataset/yt_bb/crop511'
+      ANNOTATION: '/root/object_tracking_3/tracking/after_pysot_deal_dataset/yt_bb/train.json'
       RANGE: 3
       USE: 200000
     GOT10K:
-      PATH: './data/got10k/crop511'
-      ANNOTATION: './data/got10k/all.json'
+      PATH: '/root/object_tracking_4/tracking/after_pysot_deal_dataset/got_10k/crop511'
+      ANNOTATION: '/root/object_tracking_4/tracking/after_pysot_deal_dataset/got_10k/train.json'
       RANGE: 100
       USE: 200000
     DET:
-      PATH: './data/det/crop511'
-      ANNOTATION: './data/det/train.json'
+      PATH: '/root/object_tracking_4/tracking/after_pysot_deal_dataset/det/crop511'
+      ANNOTATION: '/root/object_tracking_4/tracking/after_pysot_deal_dataset/det/train.json'
       RANGE: 100
       USE: 50000
     COCO:
-      PATH: "./data/coco/crop511"
-      ANNOTATION: "./data/coco/train2017.json"
+      PATH: "/root/object_tracking_0/tracking/after_pysot_deal_dataset/coco/crop511"
+      ANNOTATION: "/root/object_tracking_0/tracking/after_pysot_deal_dataset/coco/train2017.json"
       RANGE: 1
       USE: 50000
-

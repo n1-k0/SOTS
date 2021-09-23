@@ -230,6 +230,7 @@ class ResNet_plus2(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x, online=False):
+        #print(x.shape) #torch.Size([32, 3, 127, 127])
         x = self.conv1(x)
         x = self.bn1(x)
         x_ = self.relu(x)
@@ -240,8 +241,21 @@ class ResNet_plus2(nn.Module):
 
         if online: return self.layeronline(p2)
         p3 = self.layer3(p2)
-
-        return [x_, p1, p2], p3
+        p4 = self.layer4(p3)
+        out = []
+        out = [x_, p1, p2, p3, p4]
+        out = [out[i] for i in self.used_layers]
+        #print(out[0].shape)
+        #print('p2:', p2.shape)
+        #print('p3:', p3.shape)
+        #print('p4:', p4.shape)
+        '''
+        p2: torch.Size([32, 512, 15, 15])
+        p3: torch.Size([32, 1024, 15, 15])
+        p4: torch.Size([32, 1024, 15, 15]) 
+        '''
+        # return [x_, p1, p2], p3
+        return out
 
 
 class ResNet(nn.Module):

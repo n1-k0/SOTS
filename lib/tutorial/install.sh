@@ -8,14 +8,14 @@ fi
 conda_install_path=$1
 conda_env_name=$2
 
-source $conda_install_path/etc/profile.d/conda.sh
-echo "****************** Creating conda environment ${conda_env_name} python=3.7 ******************"
-conda create -y -n $conda_env_name  python=3.7 
+#source $conda_install_path/etc/profile.d/conda.sh
+#echo "****************** Creating conda environment ${conda_env_name} python=3.7 ******************"
+#conda create -y -n $conda_env_name  python=3.7 
 
 echo ""
 echo ""
 echo "****************** Activating conda environment ${conda_env_name} ******************"
-conda activate $conda_env_name
+#conda activate $conda_env_name
 
 echo ""
 echo ""
@@ -35,7 +35,7 @@ conda install -y pandas
 echo ""
 echo ""
 echo "****************** Installing opencv ******************"
-pip install opencv-python
+# pip install opencv-python
 
 echo ""
 echo ""
@@ -87,6 +87,6 @@ pip install hyperopt
 echo ""
 echo ""
 echo "****************** Installing vot python toolkit ******************"
-pip install git+https://github.com/votchallenge/vot-toolkit-python@92241358a172e6815c8b5c4a24a1e89b6d2864a9
+# pip install git+https://github.com/votchallenge/vot-toolkit-python@92241358a172e6815c8b5c4a24a1e89b6d2864a9
 
 echo "****************** Installation complete! ******************"

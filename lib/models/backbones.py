@@ -13,8 +13,10 @@ class ResNet50(nn.Module):
 
     def forward(self, x, online=False):
         if not online:
-            x_stages, x = self.features(x, online=online)
-            return x_stages, x
+            # x_stages, x = self.features(x, online=online)
+            x = self.features(x, online=online)
+            # return x_stages, x
+            return x
         else:
             x = self.features(x, online=online)
             return x

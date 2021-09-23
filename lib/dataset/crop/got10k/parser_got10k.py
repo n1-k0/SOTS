@@ -16,7 +16,7 @@ parser.add_argument('--dir',type=str, default='/data/share/GOT10K', help='your v
 args = parser.parse_args()
 
 got10k_base_path = args.dir
-sub_sets = sorted({'train', 'val'})
+sub_sets = sorted({'train_data', 'val'})
 
 got10k = []
 for sub_set in sub_sets:
@@ -24,6 +24,10 @@ for sub_set in sub_sets:
     videos = sorted(listdir(sub_set_base_path))
     s = []
     for vi, video in enumerate(videos):
+        if sub_set == 'val' and vi>=180:
+            break
+        if vi >= 9335:
+            break
         print('subset: {} video id: {:04d} / {:04d}'.format(sub_set, vi, len(videos)))
         v = dict()
         v['base_path'] = join(sub_set, video)

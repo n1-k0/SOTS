@@ -8,8 +8,8 @@ import sys
 import time
 
 
-got10k_base_path = '/data/share/GOT10K'
-sub_sets = sorted({'train', 'val'})
+got10k_base_path = '/root/object_tracking_4/tracking/got10k'
+sub_sets = sorted({'train_data', 'val'})
 
 
 # Print iterations progress (thanks StackOverflow)

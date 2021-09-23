@@ -60,7 +60,7 @@ class OceanDataset(Dataset):
         )
 
         # train data information
-        print('train datas: {}'.format(cfg.OCEAN.TRAIN.WHICH_USE))
+        #print('train datas: {}'.format(cfg.OCEAN.TRAIN.WHICH_USE))
         self.train_datas = []    # all train dataset
         start = 0
         self.num = 0
@@ -71,7 +71,7 @@ class OceanDataset(Dataset):
             self.num += dataset.num_use  # the number used for subset shuffle
 
         self._shuffle()
-        print(cfg)
+        #print(cfg)
 
     def __len__(self):
         return self.num
@@ -108,7 +108,10 @@ class OceanDataset(Dataset):
 
         template, search = map(lambda x: np.transpose(x, (2, 0, 1)).astype(np.float32), [template, search])
 
-        return template, search, out_label, reg_label, reg_weight, np.array(bbox, np.float32)  # self.label 15*15/17*17
+        cls = np.zeros((self.size, self.size), dtype=np.int64)
+
+        # return template, search, out_label, reg_label, reg_weight, np.array(bbox, np.float32)  # self.label 15*15/17*17
+        return template, search, cls, reg_label, reg_weight, np.array(bbox, np.float32)  # self.label 15*15/17*17
 
     # ------------------------------------
     # function groups for selecting pairs

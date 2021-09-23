@@ -1,12 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+#from models.dcn.deform_conv import DeformConv
 
 
 class Corr_Up(nn.Module):
     """
     SiamFC head
     """
+
     def __init__(self):
         super(Corr_Up, self).__init__()
 
@@ -30,9 +32,9 @@ def xcorr_depthwise(x, kernel):
     """
     batch = kernel.size(0)
     channel = kernel.size(1)
-    x = x.view(1, batch*channel, x.size(2), x.size(3))
-    kernel = kernel.view(batch*channel, 1, kernel.size(2), kernel.size(3))
-    out = F.conv2d(x, kernel, groups=batch*channel)
+    x = x.view(1, batch * channel, x.size(2), x.size(3))
+    kernel = kernel.view(batch * channel, 1, kernel.size(2), kernel.size(3))
+    out = F.conv2d(x, kernel, groups=batch * channel)
     out = out.view(batch, channel, out.size(2), out.size(3))
     return out
 
@@ -41,21 +43,21 @@ class DepthwiseXCorr(nn.Module):
     def __init__(self, in_channels, hidden, out_channels, kernel_size=3, hidden_kernel_size=5):
         super(DepthwiseXCorr, self).__init__()
         self.conv_kernel = nn.Sequential(
-                nn.Conv2d(in_channels, hidden, kernel_size=kernel_size, bias=False),
-                nn.BatchNorm2d(hidden),
-                nn.ReLU(inplace=True),
-                )
+            nn.Conv2d(in_channels, hidden, kernel_size=kernel_size, bias=False),
+            nn.BatchNorm2d(hidden),
+            nn.ReLU(inplace=True),
+        )
         self.conv_search = nn.Sequential(
-                nn.Conv2d(in_channels, hidden, kernel_size=kernel_size, bias=False),
-                nn.BatchNorm2d(hidden),
-                nn.ReLU(inplace=True),
-                )
+            nn.Conv2d(in_channels, hidden, kernel_size=kernel_size, bias=False),
+            nn.BatchNorm2d(hidden),
+            nn.ReLU(inplace=True),
+        )
         self.head = nn.Sequential(
-                nn.Conv2d(hidden, hidden, kernel_size=1, bias=False),
-                nn.BatchNorm2d(hidden),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(hidden, out_channels, kernel_size=1)
-                )
+            nn.Conv2d(hidden, hidden, kernel_size=1, bias=False),
+            nn.BatchNorm2d(hidden),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(hidden, out_channels, kernel_size=1)
+        )
 
     def forward(self, kernel, search):
         kernel = self.conv_kernel(kernel)
@@ -69,11 +71,11 @@ class MultiDiCorr(nn.Module):
     """
     For tensorRT version
     """
+
     def __init__(self, inchannels=512, outchannels=256):
         super(MultiDiCorr, self).__init__()
         self.cls_encode = matrix(in_channels=inchannels, out_channels=outchannels)
         self.reg_encode = matrix(in_channels=inchannels, out_channels=outchannels)
-
 
     def forward(self, search, kernal):
         """
@@ -86,10 +88,12 @@ class MultiDiCorr(nn.Module):
 
         return cls_z0, cls_z1, cls_z2, cls_x0, cls_x1, cls_x2, reg_z0, reg_z1, reg_z2, reg_x0, reg_x1, reg_x2
 
+
 class OceanCorr(nn.Module):
     """
     For tensorRT version
     """
+
     def __init__(self, inchannels=512):
         super(OceanCorr, self).__init__()
 
@@ -109,9 +113,14 @@ class AdjustLayer(nn.Module):
         self.downsample = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            )
+        )
 
     def forward(self, x, crop=False):
+        #print('ADJ x: ', x.shape)
+        '''
+        ADJ z:  torch.Size([32, 1024, 15, 15])
+        ADJ x:  torch.Size([32, 1024, 31, 31])
+        '''
         x_ori = self.downsample(x)
         if x_ori.size(3) < 20 and crop:
             l = 4
@@ -121,7 +130,30 @@ class AdjustLayer(nn.Module):
         if not crop:
             return x_ori
         else:
-            return x_ori, xf
+            # return x_ori, xf
+            return xf
+
+class AdjustAllLayer(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(AdjustAllLayer, self).__init__()
+        self.num = len(out_channels)
+        if self.num == 1:
+            self.downsample = AdjustLayer(in_channels[0], out_channels[0])
+        else:
+            for i in range(self.num):
+                self.add_module('downsample' + str(i + 2),
+                                AdjustLayer(in_channels[i], out_channels[i]))
+
+    def forward(self, features, crop=False):
+        if self.num == 1:
+            return self.downsample(features)
+        else:
+            out = []
+            for i in range(self.num):
+                adj_layer = getattr(self, 'downsample' + str(i + 2))
+                out.append(adj_layer(features[i], crop))
+            return out
+
 
 # --------------------
 # Ocean module
@@ -217,7 +249,6 @@ class AlignHead(nn.Module):
         return cls_score
 
 
-
 class GroupDW(nn.Module):
     """
     encode backbone feature
@@ -234,7 +265,7 @@ class GroupDW(nn.Module):
         re12 = xcorr_depthwise(x12, z12)
         re21 = xcorr_depthwise(x21, z21)
         re = [re11, re12, re21]
-        
+
         # weight
         weight = F.softmax(self.weight, 0)
 
@@ -254,7 +285,6 @@ class SingleDW(nn.Module):
         super(SingleDW, self).__init__()
 
     def forward(self, z, x):
-
         s = xcorr_depthwise(x, z)
 
         return s
@@ -297,34 +327,85 @@ class box_tower(nn.Module):
         self.add_module('bbox_tower', nn.Sequential(*tower))
         self.add_module('cls_tower', nn.Sequential(*cls_tower))
 
+        self.centerness = nn.Conv2d(
+            inchannels, 1, kernel_size=3, stride=1,
+            padding=1
+        )
 
         # reg head
         self.bbox_pred = nn.Conv2d(outchannels, 4, kernel_size=3, stride=1, padding=1)
-        self.cls_pred = nn.Conv2d(outchannels, 1, kernel_size=3, stride=1, padding=1)
+        self.cls_pred = nn.Conv2d(outchannels, 2, kernel_size=3, stride=1, padding=1)
 
         # adjust scale
         self.adjust = nn.Parameter(0.1 * torch.ones(1))
         self.bias = nn.Parameter(torch.Tensor(1.0 * torch.ones(1, 4, 1, 1)).cuda())
 
+        self.down = nn.ConvTranspose2d(256 * 3, 256, 1, 1)
+    # def forward(self, search, kernal, update=None):
+    #     # encode first
+    #     if update is None:
+    #         cls_z, cls_x = self.cls_encode(kernal, search)   # [z11, z12, z13]
+    #     else:
+    #         cls_z, cls_x = self.cls_encode(update, search)  # [z11, z12, z13]
+    #
+    #     reg_z, reg_x = self.reg_encode(kernal, search)  # [x11, x12, x13]
+    #
+    #     # cls and reg DW
+    #     cls_dw = self.cls_dw(cls_z, cls_x) # cls_dw: torch.Size([32, 256, 25, 25])
+    #     reg_dw = self.reg_dw(reg_z, reg_x) # reg_dw: torch.Size([32, 256, 25, 25]
+    #     x_reg = self.bbox_tower(reg_dw) # x_reg torch.Size([32, 256, 25, 25])
+    #     x = self.adjust * self.bbox_pred(x_reg) + self.bias
+    #     x = torch.exp(x)
+    #
+    #     # cls tower
+    #     c = self.cls_tower(cls_dw)  # c: torch.Size([32, 256, 25, 25])
+    #     cls = 0.1 * self.cls_pred(c)  # cls: torch.Size([32, 1, 25, 25])
+    #     # print('c:', c.shape)
+    #     # print('cls:', cls.shape)
+    #     # centerness = self.centerness(c) # in: [batch, 256, 25, 25] out: [batch, 1, 25, 25]
+    #
+    #     return x, cls, cls_dw, x_reg
+
+    # multi level backbone version
     def forward(self, search, kernal, update=None):
-        # encode first
+        cls_zs = []
+        cls_xs = []
+        reg_zs = []
+        reg_xs = []
         if update is None:
-            cls_z, cls_x = self.cls_encode(kernal, search)   # [z11, z12, z13]
+            for i in range(len(search)):
+                cls_z, cls_x = self.cls_encode(kernal[i], search[i])   # [z11, z12, z13]
+                cls_zs.append(cls_z)
+                cls_xs.append(cls_x)
         else:
             cls_z, cls_x = self.cls_encode(update, search)  # [z11, z12, z13]
 
-        reg_z, reg_x = self.reg_encode(kernal, search)  # [x11, x12, x13]
+        for i in range(len(search)):
+            reg_z, reg_x = self.reg_encode(kernal[i], search[i])  # [x11, x12, x13]
+            reg_zs.append(reg_z)
+            reg_xs.append(reg_x)
 
         # cls and reg DW
-        cls_dw = self.cls_dw(cls_z, cls_x)
-        reg_dw = self.reg_dw(reg_z, reg_x)
+        cls_dw = self.cls_dw(cls_zs[0], cls_xs[0]) # size: [32, 256, 25, 25]
+        reg_dw = self.reg_dw(reg_zs[0], reg_xs[0])
+        for i in range(len(cls_zs)-1):
+            cls_dw_new = self.cls_dw(cls_zs[i+1], cls_xs[i+1])
+            reg_dw_new = self.reg_dw(reg_zs[i+1], reg_xs[i+1])
+            cls_dw = torch.cat([cls_dw, cls_dw_new], 1)
+            reg_dw = torch.cat([reg_dw, reg_dw_new], 1)
+        #print("cls_dw: ", cls_dw.shape)
+        cls_dw = self.down(cls_dw)
+        reg_dw = self.down(reg_dw)
         x_reg = self.bbox_tower(reg_dw)
         x = self.adjust * self.bbox_pred(x_reg) + self.bias
         x = torch.exp(x)
 
         # cls tower
-        c = self.cls_tower(cls_dw)
-        cls = 0.1 * self.cls_pred(c)
+        c = self.cls_tower(cls_dw)  # c: torch.Size([32, 256, 25, 25])
+        cls = 0.1 * self.cls_pred(c)  # cls: torch.Size([32, 1, 25, 25])
+        #print('c:', c.shape)
+        #print('cls:', cls.shape)
+        centerness = self.centerness(c) # in: [batch, 256, 25, 25] out: [batch, 1, 25, 25]
 
-        return x, cls, cls_dw, x_reg
-
+        # return x, cls, cls_dw, x_reg
+        return x, cls, cls_dw, x_reg, centerness

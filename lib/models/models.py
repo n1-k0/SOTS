@@ -19,14 +19,19 @@ import models.online.classifier.initializer as clf_initializer
 import models.online.classifier.optimizer as clf_optimizer
 import models.online.classifier.linear_filter as target_clf
 from online import TensorList, load_network
-
-
+# from models.ban import MultiBAN
+from models.connect import AdjustAllLayer
+from models.loss_car import make_siamcar_loss_evaluator
 class Ocean(Ocean_):
-    def __init__(self, align=False, online=False):
+    def __init__(self, align=False, online=False, cfg=None):
         super(Ocean, self).__init__()
-        self.features = ResNet50(used_layers=[3], online=online)   # in param
-        self.neck = AdjustLayer(in_channels=1024, out_channels=256)
-        self.connect_model = box_tower(inchannels=256, outchannels=256, towernum=4)
+        #print('model')
+        self.loss_evaluator = make_siamcar_loss_evaluator(cfg)
+        self.features = ResNet50(used_layers=[2, 3, 4], online=online)   # in param
+        # self.neck = AdjustLayer(in_channels=1024, out_channels=256)
+        self.neck = AdjustAllLayer(in_channels=[512, 1024, 2048], out_channels=[256, 256, 256])
+        # self.ban = MultiBAN(in_channels=256)
+        self.connect_model = box_tower(inchannels=256, outchannels=256, towernum=4 )
         self.align_head = AlignHead(256, 256) if align else None
 
 

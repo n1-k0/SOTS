@@ -1,0 +1,11 @@
+README.md
+setup.py
+lib/models/dcn/src/deform_conv_cuda.cpp
+lib/models/dcn/src/deform_conv_cuda_kernel.cu
+lib/models/dcn/src/deform_pool_cuda.cpp
+lib/models/dcn/src/deform_pool_cuda_kernel.cu
+mmdet.egg-info/PKG-INFO
+mmdet.egg-info/SOURCES.txt
+mmdet.egg-info/dependency_links.txt
+mmdet.egg-info/not-zip-safe
+mmdet.egg-info/top_level.txt

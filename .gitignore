@@ -1,0 +1,14 @@
+nohup.out
+snapshot/
+*.idea
+*__pycache__/
+*.pth
+.eggs/
+data/
+build/
+logs/
+*.model
+*.so
+lib/dataset/crop/got10k/got10k.json
+*.o
+

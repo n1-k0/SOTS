@@ -17,6 +17,7 @@ def ocean_train(train_loader, model,  optimizer, epoch, cur_lr, cfg, writer_dict
     cls_losses_align = AverageMeter()
     cls_losses_ori = AverageMeter()
     reg_losses = AverageMeter()
+
     end = time.time()
 
     # switch to train mode
@@ -28,24 +29,26 @@ def ocean_train(train_loader, model,  optimizer, epoch, cur_lr, cfg, writer_dict
         data_time.update(time.time() - end)
 
         # input and output/loss
-        label_cls = input[2].type(torch.FloatTensor)  # BCE need float
+        # label_cls = input[2].type(torch.FloatTensor)  # BCE need float
         template = input[0].to(device)
         search = input[1].to(device)
-        label_cls = label_cls.to(device)
+        label_cls = input[2].to(device)
         reg_label = input[3].float().to(device)
         reg_weight = input[4].float().to(device)
+        bboxes = input[5].to(device)
+        # cls_loss_ori, cls_loss_align, reg_loss = model(template, search, label_cls, reg_target=reg_label, reg_weight=reg_weight)
 
-        cls_loss_ori, cls_loss_align, reg_loss = model(template, search, label_cls, reg_target=reg_label, reg_weight=reg_weight)
+        cls_loss_ori, cls_loss_align, reg_loss, cen_loss = model(template, search, label_cls, reg_target=reg_label, reg_weight=reg_weight, boxes=bboxes)
 
         cls_loss_ori = torch.mean(cls_loss_ori)
         reg_loss = torch.mean(reg_loss)
 
         if cls_loss_align is not None:
             cls_loss_align = torch.mean(cls_loss_align)
-            loss = cls_loss_ori + cls_loss_align + reg_loss
+            loss = cls_loss_ori + 3*reg_loss + cen_loss
         else:
             cls_loss_align = 0
-            loss = cls_loss_ori + reg_loss
+            loss = cls_loss_ori + 3*reg_loss + cen_loss
 
         loss = torch.mean(loss)
 
@@ -74,12 +77,19 @@ def ocean_train(train_loader, model,  optimizer, epoch, cur_lr, cfg, writer_dict
         reg_loss = reg_loss.item()
         reg_losses.update(reg_loss, template.size(0))
 
+
         batch_time.update(time.time() - end)
         end = time.time()
 
         if (iter + 1) % cfg.PRINT_FREQ == 0:
             logger.info(
-                'Epoch: [{0}][{1}/{2}] lr: {lr:.7f}\t Batch Time: {batch_time.avg:.3f}s \t Data Time:{data_time.avg:.3f}s \t CLS_ORI Loss:{cls_loss_ori.avg:.5f} \t CLS_ALIGN Loss:{cls_loss_align.avg:.5f} \t REG Loss:{reg_loss.avg:.5f} \t Loss:{loss.avg:.5f}'.format(
+                'Epoch: [{0}][{1}/{2}] lr: {lr:.7f}\t '
+                'Batch Time: {batch_time.avg:.3f}s \t '
+                'Data Time:{data_time.avg:.3f}s \t '
+                'CLS_ORI Loss:{cls_loss_ori.avg:.5f} \t '
+                'CLS_ALIGN Loss:{cls_loss_align.avg:.5f} \t '
+                'REG Loss:{reg_loss.avg:.5f} \t '
+                'Loss:{loss.avg:.5f}'.format(
                     epoch, iter + 1, len(train_loader), lr=cur_lr, batch_time=batch_time, data_time=data_time,
                     loss=losses, cls_loss_ori=cls_losses_ori, cls_loss_align=cls_losses_align, reg_loss=reg_losses))
 

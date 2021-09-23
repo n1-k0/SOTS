@@ -199,7 +199,7 @@ def main():
         model = models.__dict__[config.OCEAN.TRAIN.MODEL](align=True).cuda()  # build model
     else:
         print('====> Default: train without object-aware, also prepare for OceanPlus <====')
-        model = models.__dict__[config.OCEAN.TRAIN.MODEL](align=False).cuda()  # build model
+        model = models.__dict__[config.OCEAN.TRAIN.MODEL](align=False, cfg=config).cuda()  # build model
 
     print(model)
 

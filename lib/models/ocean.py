@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
+from models.loss_car import make_siamcar_loss_evaluator
+# from core.config import config, update_config
+# from easydict import EasyDict as edict
 
 class Ocean_(nn.Module):
     def __init__(self):
@@ -18,8 +21,9 @@ class Ocean_(nn.Module):
         self.batch = 32 if self.training else 1
         self.lambda_u = 0.1
         self.lambda_s = 0.2
-
+        #print('oncean_')
         self.grids()
+        #print('ocean_2')
 
     def feature_extractor(self, x, online=False):
         return self.features(x, online=online)
@@ -118,24 +122,30 @@ class Ocean_(nn.Module):
         each element of feature map on input search image
         :return: H*W*2 (position for each element)
         """
+        print('grids')
         sz = self.score_size
         stride = 8
 
         sz_x = sz // 2
         sz_y = sz // 2
-
+        print('grids_2')
         x, y = np.meshgrid(np.arange(0, sz) - np.floor(float(sz_x)),
                            np.arange(0, sz) - np.floor(float(sz_y)))
-
+        print('grids_3')
         self.grid_to_search = {}
         self.grid_to_search_x = x * stride + self.search_size // 2
         self.grid_to_search_y = y * stride + self.search_size // 2
-
+        print('grids_4')
+        print(torch.Tensor(self.grid_to_search_x).shape)
+        print(torch.Tensor(self.grid_to_search_x).unsqueeze(0).shape)
+        print(torch.Tensor(self.grid_to_search_x).unsqueeze(0).unsqueeze(0).shape)
         self.grid_to_search_x = torch.Tensor(self.grid_to_search_x).unsqueeze(0).unsqueeze(0).cuda()
+        print('grids_4.5')
         self.grid_to_search_y = torch.Tensor(self.grid_to_search_y).unsqueeze(0).unsqueeze(0).cuda()
-
+        print('grids_5')
         self.grid_to_search_x = self.grid_to_search_x.repeat(self.batch, 1, 1, 1)
         self.grid_to_search_y = self.grid_to_search_y.repeat(self.batch, 1, 1, 1)
+        print('grids_6')
 
     def pred_to_image(self, bbox_pred):
         self.grid_to_search_x = self.grid_to_search_x.to(bbox_pred.device)
@@ -311,15 +321,26 @@ class Ocean_(nn.Module):
 
             return cls_pred, bbox_pred
 
-    def forward(self, template, search, label=None, reg_target=None, reg_weight=None):
+    def log_softmax(self, cls):
+        b, a2, h, w = cls.size()
+        cls = cls.view(b, 2, a2//2, h, w)
+        cls = cls.permute(0, 2, 3, 4, 1).contiguous()
+        cls = F.log_softmax(cls, dim=4)
+        return cls
+
+    def forward(self, template, search, label=None, reg_target=None, reg_weight=None, boxes=None):
         """
         :return:
         """
-        _, zf = self.feature_extractor(template)
-        _, xf = self.feature_extractor(search)
+        # _, zf = self.feature_extractor(template)
+        # _, xf = self.feature_extractor(search)
 
+        zf = self.feature_extractor(template)
+        xf = self.feature_extractor(search)
+        #print('zf0:', zf[0].shape)
         if self.neck is not None:
-            _, zf = self.neck(zf, crop=True)
+            # _, zf = self.neck(zf, crop=True)
+            zf = self.neck(zf, crop=True)
             xf = self.neck(xf, crop=False)
 
         # depth-wise cross correlation --> tower --> box pred
@@ -335,7 +356,7 @@ class Ocean_(nn.Module):
 
             # add cls loss
             align_cls_label = self.align_label(bbox_pred, reg_target, reg_weight)
-            cls_loss_ori = self._weighted_BCE(cls_pred, label)
+            cls_loss_ori = self._weigted_BCE(cls_pred, label)
             cls_loss = self.criterion(cls_align.squeeze(), align_cls_label)
 
             if torch.isnan(cls_loss):
@@ -343,18 +364,48 @@ class Ocean_(nn.Module):
 
             return cls_loss_ori, cls_loss, reg_loss
         else:
-            bbox_pred, cls_pred, _, _ = self.connect_model(xf, zf)
+            # bbox_pred, cls_pred, _, _ = self.connect_model(xf, zf)
+            bbox_pred, cls_pred, _, _, cen = self.connect_model(xf, zf)
             reg_loss = self.add_iouloss(bbox_pred, reg_target, reg_weight)
-            cls_loss = self._weighted_BCE(cls_pred, label)
-            return cls_loss, None, reg_loss
+            # cls_loss = self._weighted_BCE(cls_pred, label)
+
+            locations = compute_locations(cls_pred, 8) # TRACK.STRIDE
+            #print('cls_pred:', cls_pred.shape)
+            #print('reg_target:', reg_target.shape) # reg_target: torch.size([32, 25, 25, 4])
+            cls = self.log_softmax(cls_pred)
+            cls_loss, loc_loss, cen_loss = self.loss_evaluator(
+                locations,
+                cls,
+                bbox_pred,
+                cen, label, boxes
+            )
+            # return cls_loss, None, reg_loss
+            return cls_loss, None, reg_loss, cen_loss
 
 
 
+def compute_locations(features,stride):
+    h, w = features.size()[-2:]
+    locations_per_level = compute_locations_per_level(
+        h, w, stride,
+        features.device
+    )
+    return locations_per_level
 
 
-
-
-
-
-
-
+def compute_locations_per_level(h, w, stride, device):
+    shifts_x = torch.arange(
+        0, w * stride, step=stride,
+        dtype=torch.float32, device=device
+    )
+    shifts_y = torch.arange(
+        0, h * stride, step=stride,
+        dtype=torch.float32, device=device
+    )
+    shift_y, shift_x = torch.meshgrid((shifts_y, shifts_x))
+    shift_x = shift_x.reshape(-1)
+    shift_y = shift_y.reshape(-1)
+    # locations = torch.stack((shift_x, shift_y), dim=1) + stride + 3*stride  # (size_z-1)/2*size_z 28
+    # locations = torch.stack((shift_x, shift_y), dim=1) + stride
+    locations = torch.stack((shift_x, shift_y), dim=1) + 32  #alex:48 // 32
+    return locations
