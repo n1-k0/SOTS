@@ -278,10 +278,10 @@ class Ocean_(nn.Module):
         return offsets
 
     def template(self, z, template_mask = None):
-        _, self.zf = self.feature_extractor(z)
+        self.zf = self.feature_extractor(z)
 
         if self.neck is not None:
-            self.zf_ori, self.zf = self.neck(self.zf, crop=True)
+            self.zf = self.neck(self.zf, crop=True)
 
         if self.align_head is not None:
             self.update_flag = True
@@ -297,7 +297,7 @@ class Ocean_(nn.Module):
 
     def track(self, x):
 
-        _, xf = self.feature_extractor(x)
+        xf = self.feature_extractor(x)
 
         if self.neck is not None:
             xf = self.neck(xf)
@@ -317,7 +317,7 @@ class Ocean_(nn.Module):
 
             return cls_pred, bbox_pred, cls_align
         else:
-            bbox_pred, cls_pred, _, _ = self.connect_model(xf, self.zf)
+            bbox_pred, cls_pred, _, _, _ = self.connect_model(xf, self.zf)
 
             return cls_pred, bbox_pred
 

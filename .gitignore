@@ -12,3 +12,4 @@ logs/
 lib/dataset/crop/got10k/got10k.json
 *.o
 mmdet.egg-info/
+vis/

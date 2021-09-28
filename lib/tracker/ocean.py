@@ -17,6 +17,10 @@ class Ocean(object):
         self.online = info.online
         self.trt = info.TRT
 
+    def _convert_cls(self, cls):
+        cls = F.softmax(cls[:,:,:,:], dim=1).data[:,1,:,:].cpu().numpy()
+        return cls
+
     def init(self, im, target_pos, target_sz, model, hp=None):
         # in: whether input infrared image
         state = dict()
@@ -109,8 +113,10 @@ class Ocean(object):
 
         else:
             cls_score, bbox_pred = net.track(x_crops)
-            cls_score = F.sigmoid(cls_score).squeeze().cpu().data.numpy()
-
+            cls_score = self._convert_cls(cls_score).squeeze()
+            #cls_score = F.sigmoid(cls_score).squeeze().cpu().data.numpy()
+        print(cls_score.shape)
+        #exit()
         # bbox to real predict
         bbox_pred = bbox_pred.squeeze().cpu().data.numpy()
 

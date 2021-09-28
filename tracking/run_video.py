@@ -37,7 +37,7 @@ from tqdm import tqdm
 # except:
 #     pass
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def parse_args():
     """
@@ -45,8 +45,8 @@ def parse_args():
     """
     parser = argparse.ArgumentParser(description='PyTorch SiamFC Tracking Test')
     parser.add_argument('--arch', default='Ocean', type=str, help='backbone architecture')
-    parser.add_argument('--resume', default='snapshot_finetune/checkpoint_e20.pth', type=str, help='pretrained model')
-    parser.add_argument('--video', default='./dataset/Demonstration/Sky/segment1.mp4', type=str, help='video file path')
+    parser.add_argument('--resume', default='snapshot/checkpoint_e49.pth', type=str, help='pretrained model')
+    parser.add_argument('--video', default='../videos/2.mp4', type=str, help='video file path')
     parser.add_argument('--online', default=False, type=bool, help='use online or offline model')
     parser.add_argument('--save', default=True, type=bool, help='save pictures')
     parser.add_argument('--init_bbox', default=None, help='bbox in the first frame None or [lx, ly, w, h]')

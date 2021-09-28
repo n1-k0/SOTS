@@ -34,7 +34,7 @@ def parse_args():
     parser.add_argument('--resume', default="snapshot/OceanV.pth", type=str, help='pretrained model')
     parser.add_argument('--dataset', default='VOT2019', help='dataset test')
     parser.add_argument('--epoch_test', default=False, type=bool, help='multi-gpu epoch test flag')
-    parser.add_argument('--align', default='True', type=str, help='alignment module flag') # bool 
+    parser.add_argument('--align', default='False', type=str, help='alignment module flag') # bool
     parser.add_argument('--online', default=False, type=bool, help='online flag')
     parser.add_argument('--video', default=None, type=str, help='test a video in benchmark')
     args = parser.parse_args()
